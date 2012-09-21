@@ -1,0 +1,138 @@
+pro smart_est_error, skiptostability=skiptostability
+
+path='~/science/data/smart_paper_sav/'
+path2='~/science/papers/active_regions_1/review/'
+
+if keyword_set(skiptostability) then goto, goto_skiptostability
+
+;NOISE ERROR
+
+noise=20. ;G
+
+restore,path+'smart_20070511_2051.sav',/ver
+
+print,arstruct[0].bflux*1d16
+
+print,arstruct[0].area
+
+mask=armask
+
+mask[where(mask ne 1)]=0
+plot_image,(mask*mdimap.data)[500:700,400:500] >(-1000) <1000
+
+war=where(mask*mdimap.data gt 0)
+
+print,[['MDI PIXELS:'], $
+['% Compiled module: SMART_MDIPXAREA.'], $
+['2.0990357 Mm^2'], $
+['2.0990357e+16 cm^2'], $
+['1.4488049 Mm'], $
+['1.4488049e+08 cm']]
+
+print,'Noise error contribution for NOAA 10955:'
+print,(2.0990357d16*n_elements(war)*noise)/(arstruct[0].bflux*1d16)*100.,'%'
+
+stop
+
+;SATURATION ERROR
+
+mreadfits,smart_paths(/mdi,/no_cal)+'smdi_fd_20000520_124830.fits.gz',ind,dat
+
+!p.multi=[0,1,2]
+plot_image,dat[350:550,630:720]
+hline,60 
+plot,(dat[350:550,630:720])[*,60]
+hline,2000
+
+stop
+
+!p.multi=[0,1,2]
+plot_image,dat[350:550,630:720]
+hline,47
+plot,(dat[350:550,630:720])[*,47]
+hline,(-2000)
+
+stop
+
+!p.multi=0
+pmm,dat[350:550,630:720]
+plot_hist,abs(dat[350:550,630:720]),/log
+vline,3000,/log
+
+stop
+
+;STABILITY ERROR
+goto_skiptostability:
+
+restore,path2+'tracking_10488.sav',/ver
+
+window,xs=800,ys=800
+!p.multi=[0,1,4]
+pchar=2
+
+w0=where(abs(tim-25.603) eq min(abs(tim-25.603)))
+w1=where(abs(tim-33.734) eq min(abs(tim-33.734)))
+
+print,anytim(anytim('26-oct-2003')+(tim[[w0,w1]])*24.*3600.,/vms)
+
+time=TIM[w0:w1]
+flux=AR10488[w0:w1].bflux
+area=AR10488[w0:w1].area
+
+pffit=mpfitexpr('p[0]+p[1]*(x+p[2])^(2.)', time, flux, dum, [5d6,1d3,-50.], yfit=yffit)
+pafit=mpfitexpr('p[0]+p[1]*(x+p[2])^(2.)', time, area, dum, [4d4,-100.,-29.], yfit=yafit)
+
+setcolors,/sys,/quiet
+
+plot,time,flux*1d16,xran=[26.5,33],/xsty,/ystyle,ps=-4,ytit='FLUX [Mx]',chars=pchar
+oplot,time,yffit*1d16,color=!red
+
+plot,time,area,xran=[26.5,33],/xsty,/ystyle,ps=-4,ytit='AREA [Mm^2]',chars=pchar
+oplot,time,yafit,color=!red
+
+;Find 2SIG error
+fres=(yffit-flux)
+fstdv=stdev(fres)*2. 
+ares=(yafit-area)
+astdv=stdev(ares)*2.
+
+plot,time,fres,ps=-4,ytit='FLUX RESID',chars=pchar,yran=[-3d5,3d5],/ysty,/xsty
+hline,[fstdv,-fstdv],color=!red
+hline,0
+plot,time,ares,ps=-4,ytit='AREA RESID',xtit='DAYS SINCE 26-OCT-2003',chars=pchar,yran=[-4d3,4d3],/xsty
+hline,[astdv,-astdv],color=!red
+hline,0
+print,'N Flux = '+strtrim(n_elements(fres))
+print,'N Area = '+strtrim(n_elements(ares))
+print,'Flux Residual 2SIGMA STDV = '+strtrim(fstdv*1d16,2)+' Mx = '+strtrim(fstdv/mean(flux)*100.)+'%'
+print,'Area Residual 2SIGMA STDV = '+strtrim(astdv,2)+' Mm^2 = '+strtrim(astdv/mean(area)*100.)+'%'
+
+window_capture,file=path2+'smart_stability_error',/png
+
+;GAUSSIAN??
+window,1
+!p.multi=[0,1,2]
+plot_hist,ares,bin=4d2
+plot_hist,fres,bin=2d4
+
+stop
+
+;MEASURE NOISE UNCERTAINTY FOR 10488 @ DISK CENTER
+
+restore,smart_paths(/resav,/no_cal)+'smart_20031125_1251.sav',/ver
+
+armask2=armask
+armask2[where(armask2 ne 2)]=0
+armask2[where(armask2 eq 2)]=1
+armask2=float(armask2)
+
+!p.multi=0
+dat=smart_crop_ar(armask2*mdimap.data,armask2,/plot)
+pxtot=n_elements(where(abs(dat) gt 70))
+print,'10488 noise error = ',2.099*pxtot*20.*1d16,'Mx'
+print,'10488 noise error = ',2.099*pxtot*20.*1d16/(arstruct[1].bflux*1d16),'%'
+
+
+stop
+
+end
