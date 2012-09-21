@@ -1,0 +1,4 @@
+SMART
+=====
+
+smart code, refactorization
