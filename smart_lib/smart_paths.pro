@@ -1,3 +1,4 @@
+;TODO: Needs to be cleaned up!
 ;---------------------------------------------------------------------->
 
 function smart_paths, mdip=mdip, hmip=hmip, calmdip=calmdip, logp=logp,savp=savp,fitsp=fitsp, resavetrackp=resavetrackp, arsavp=arsavp, $

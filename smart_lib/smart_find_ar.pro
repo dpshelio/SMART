@@ -96,6 +96,7 @@ function smart_find_ar, in_map1, in_map2, parameters_str=parameters_str,error=er
   ;   goto,no_regions_visible
   ;endif
 
+  ;TODO: certain fields like coordinates can be done outside the loop
   nids=1
   for k=0,nar-1 do begin
 
@@ -137,10 +138,10 @@ function smart_find_ar, in_map1, in_map2, parameters_str=parameters_str,error=er
 ;Find statistical moments of each AR candidate.
      thismean=mean(arvals)
      thisstd=stddev(arvals)
-     thisabskurt=kurtosis(abs(arvals))
+     thiskurt=kurtosis(arvals)
      thisabsmean=mean(abs(arvals))
      thisabsstd=stddev(abs(arvals))
-     thiskurt=kurtosis(arvals)
+     thisabskurt=kurtosis(abs(arvals))
 
      thisnarval=n_elements(arvals)*1d
 
@@ -154,82 +155,115 @@ function smart_find_ar, in_map1, in_map2, parameters_str=parameters_str,error=er
      if total(thisar) ne 0 then thisxbary=total(thismaskcos*xcoord)/total(thismaskcos) else thisxbary=0
      if total(thisar) ne 0 then thisybary=total(thismaskcos*ycoord)/total(thismaskcos) else thisybary=0
 
-;AR Solar X,Y position (Heliocentric) in asec
+;AR Solar X,Y position (Heliocentric) in arcsec (from pixels)
      imgsz = size(in_map2.data,/dim)
-     if total(thisar) ne 0 then thishclon=(thisxpos-imgsz[0]/2.)*dxdy[0] else thishclon=0
-     if total(thisar) ne 0 then thishclat=(thisypos-imgsz[1]/2.)*dxdy[1] else thishclat=0
-
-;AR Carrington position in deg
      if total(thisar) ne 0 then begin
-        thiscar=conv_a2c([thishclon,thishclat],in_map2.time) ;TODO: Check!
-        thiscarlon=thiscar[0]
-        thiscarlat=thiscar[1]
-     endif
-     
+        thishclon=(thisxpos-imgsz[0]/2.)*dxdy[0]
+        thishclat=(thisypos-imgsz[1]/2.)*dxdy[1]
+     endif else begin
+        thishclon=0
+        thishclat=0
+     endelse
 ;AR HG position in deg
      if total(thisar) ne 0 then begin
-        thishg=conv_a2h([thishclon,thishclat],in_map2.time)
-        thishglon=thishg[0]
-        thishglat=thishg[1]
-     endif else begin & thishglon=0 & thishglat=0 & endelse
+        thishg=arcmin2hel(thishclon/60.,thishclat/60.,date=in_map2.time)
+        thishglat=thishg[0]
+        thishglon=thishg[1]
+     endif else begin
+        thishglon=0 
+        thishglat=0
+     endelse
         
+;AR Carrington position in deg
+     if total(thisar) ne 0 then begin
+        thiscarlon=tim2carr(in_map2.time)
+        thiscarlat=thishglat
+     endif
+     
                                 ;thislat=hglat[thisxpos,thisypos]*1d else thislat=0
                                 ;if total(thisar) ne 0 then thislon=hglon[thisxpos,thisypos]*1d else thislon=0
 
 ;Create an ID for each candidate that is expected to be an AR.
-        thisid=string(k+1., format='(I02)')
+     thisid=string(k+1., format='(I02)')
 
 ;Perform classification algorithm.
 ;type -> [U/M,B/S,E/D] ;uni/multipolar, big/small, emerging/decaying
-        thistype=['','','']
+     thistype=['','','']
 
-        ;Differentiate UNIPOLAR and MULTIPOLAR
-        thistype[0]=(thisbfluxfrac lt parameters_str.tpnfract[0])?'M':'U'
-        ;Differentiate BIG and SMALL
-        thistype[1]=(thisbflux ge parameters_str.fluxthresh)?'B':'S'
-        ;Differentiate EMERGING and DECAYING
-        thistype[2]=(thisflxemrg gt 0)?'E':'D'
+     ;Differentiate UNIPOLAR and MULTIPOLAR
+     thistype[0]=(thisbfluxfrac lt parameters_str.tpnfract[0])?'M':'U'
+     ;Differentiate BIG and SMALL
+     thistype[1]=(thisbflux ge parameters_str.fluxthresh)?'B':'S'
+     ;Differentiate EMERGING and DECAYING
+     thistype[2]=(thisflxemrg gt 0)?'E':'D'
 
-        case strjoin(thistype) of
-           'MBE' : thisclass='AR'
-           'MBD' : thisclass='AR'
-           'UBE' : thisclass='PL'
-           'UBD' : thisclass='PL'
-           'MSE' : thisclass='BE'
-           'MSD' : thisclass='BD'
-           'USE' : thisclass='UE'
-           'USD' : thisclass='UD'
-        endcase
+     case strjoin(thistype) of
+        'MBE' : thisclass='AR'
+        'MBD' : thisclass='AR'
+        'UBE' : thisclass='PL'
+        'UBD' : thisclass='PL'
+        'MSE' : thisclass='BE'
+        'MSD' : thisclass='BD'
+        'USE' : thisclass='UE'
+        'USD' : thisclass='UD'
+     endcase
 
 ;NL Characteristics, shrijver-R calculation, WLSG falconer value etc.
-        if thistype[0] ne 'M' then thisnlstruct=blanknl else $
-           thisnlstruct=blanknl ;smart_nlmagic, map2, nlvals, nlmask, thisnlstruct, data=thisar, maskcos=cosmap, maskarea=cosmap*pixarea;, ps=ps, plot=plot
+     if thistype[0] ne 'M' then thisnlstruct=blanknl else $
+        thisnlstruct=blanknl ;smart_nlmagic, map2, nlvals, nlmask, thisnlstruct, data=thisar, maskcos=cosmap, maskarea=cosmap*pixarea;, ps=ps, plot=plot
 ;!!!TEMP comment out nl finder.
 
 ;Fill AR property structure
 ;Naming
-        arstruct[k].smid=thisid & arstruct[k].id=thisid & arstruct[k].class=thisclass
-        arstruct[k].type=thistype
+     arstruct[k].smid=thisid
+     arstruct[k].id=thisid
+     arstruct[k].class=thisclass
+     arstruct[k].type=thistype
 ;Position
-        arstruct[k].hglon=thishglon & arstruct[k].hglat=thishglat & arstruct[k].xpos=thisxpos 
-        arstruct[k].ypos=thisypos & arstruct[k].xbary=thisxbary & arstruct[k].ybary=thisybary
-        arstruct[k].hclon=thishclon & arstruct[k].hclat=thishclat & arstruct[k].carlon=thiscarlon
-        arstruct[k].carlat=thiscarlat
+     arstruct[k].hglon=thishglon 
+     arstruct[k].hglat=thishglat
+     arstruct[k].xpos=thisxpos 
+     arstruct[k].ypos=thisypos 
+     arstruct[k].xbary=thisxbary
+     arstruct[k].ybary=thisybary
+     arstruct[k].hclon=thishclon
+     arstruct[k].hclat=thishclat 
+     arstruct[k].carlon=thiscarlon
+     arstruct[k].carlat=thiscarlat
 ;Statistical
-        arstruct[k].meanval=thismean & arstruct[k].stddv=thisstd
-        arstruct[k].kurt=thiskurt & arstruct[k].narpx=thisnarval
+     arstruct[k].meanval=thismean 
+     arstruct[k].stddv=thisstd
+     arstruct[k].kurt=thiskurt
+     arstruct[k].narpx=thisnarval
 ;Magnetic Properties
-        arstruct[k].bflux=thisbflux & arstruct[k].bfluxpos=thisbfluxpos
-        arstruct[k].bfluxneg=thisbfluxneg & arstruct[k].bfluxemrg=thisflxemrg
-        arstruct[k].time=time & arstruct[k].area=thisarea & arstruct[k].bmin=thisbminval
-        arstruct[k].bmax=thisbmaxval
+     arstruct[k].bflux=thisbflux
+     arstruct[k].bfluxpos=thisbfluxpos
+     arstruct[k].bfluxneg=thisbfluxneg
+     arstruct[k].bfluxemrg=thisflxemrg
+     arstruct[k].time=time
+     arstruct[k].area=thisarea
+     arstruct[k].bmin=thisbminval
+     arstruct[k].bmax=thisbmaxval
 ;NOAA Structure
 ;	arstruct[k].noaa=noaastr
 
 ;Polarity Separation Line	
-        arstruct[k].nlstr=thisnlstruct
+     arstruct[k].nlstr=thisnlstruct
 
-     endfor
+;Extended structure
+	restore,smart_paths(/resmap,/no_calib)+'mdi_rorsun_map.sav' ;TODO: What happens if file is >1024x1024?
+	rsundeg=asin(rorsun)/!dtor                                  ;Fix path or create image!
+     thisextstr=smart_arextent(thismask, rsundeg=rsundeg, dx=dxdy[0],dy=dxdy[1],date=in_map2.time)
+     arstruct[k].extstr = thisextstr
+
+;Chaincode
+     chain_code = smart_mask2chaincode(thismask,cc_px=cc_px, cc_len=cc_len)
+     cc_arc=(cc_px-imgsz/2.)*dxdy
+     arstruct[k].chaincode=chain_code
+     arstruct[k].cc_px = cc_px
+     arstruct[k].cc_arc = cc_arc
+     arstruct[k].cc_len = cc_len
+  endfor
 
 ;Check for NO REGIONS
   if (where(arstruct.id ne ''))[0] eq -1 then noregions=1 

@@ -23,7 +23,7 @@ strising={energy:0d,energy_fits:0d,energyppx:0d,energy_fitsppx:0d}
 if keyword_set(isingstr) then str=strising
 
 ;Defines Feature's Extent (NSEW & ~Sun center to edge)
-extstr={xylon:[0D,0D],xylat:[0D,0D],rdeglon:[0D,0D],rdeglat:[0D,0D],hglon:[0D,0D],hglat:[0D,0D],xymean10lon:[0D,0D],xymean10lat:[0D,0D],hglonwidth:0D,hglatwidth:0D}
+extstr={xylon:[0D,0D],xylat:[0D,0D],hclon:[0D,0D],hclat:[0D,0D],rdeglon:[0D,0D],rdeglat:[0D,0D],hglon:[0D,0D],hglat:[0D,0D],xymean10lon:[0D,0D],xymean10lat:[0D,0D],hglonwidth:0D,hglatwidth:0D}
 if keyword_set(extentstr) then return, extstr
 
 ;SEC Event Listing

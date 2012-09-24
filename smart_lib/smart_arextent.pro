@@ -1,7 +1,7 @@
 ;Image must be centered and complete. Ie. SIZE is used to convert to ARCSEC. 
 ;Data is shifted by imgsz/2 and multiplied by DX, DY
 
-function smart_arextent, indata, rsundeg=rsundeg, dx=dx,dy=dy, date=date plot=plot
+function smart_arextent, indata, rsundeg=rsundeg, dx=dx,dy=dy, date=date, plot=plot
 
 data=indata
 
@@ -55,16 +55,19 @@ hcybnd10=(wybnd10-imgsz[2]/2.)*dy
 ;changed to use the total bounding box and added the date
    x=(wxbnd - imgsz[1]/2.)*dx
    Y=(wybnd - imgsz[2]/2.)*dy
-   ll=conv_a2h([x[0],Y[0]],date)
-   ur=conv_a2h([X[1],Y[1]],date)
-   HGLON=[ll[0],ur[0]]
-   HGLAT=[ll[1],ur[1]]
+   ll=arcmin2hel(x[0]/60.,Y[0]/60.,date=date)
+   ur=arcmin2hel(X[1]/60.,Y[1]/60.,date=date)
+   HGLON=[ll[1],ur[1]]
+   HGLAT=[ll[0],ur[0]]
+;TODO: Do we need to change this to the 4 corners??
 
 extentstr.xylon=wxbnd   ; Px values
 extentstr.xylat=wybnd
+extentstr.hclon=x       ; Arcsec values
+extentstr.hclat=y
 extentstr.rdeglon=londegsunc  ; Solar radii??
 extentstr.rdeglat=latdegsunc
-extentstr.hglon=hglon   ; Heliocentric in degrees
+extentstr.hglon=hglon   ; Heliographic in degrees
 extentstr.hglat=hglat
 extentstr.xymean10lon=wxbnd10
 extentstr.xymean10lat=wybnd10
