@@ -176,7 +176,7 @@ function smart_find_ar, in_map1, in_map2, parameters_str=parameters_str,error=er
         
 ;AR Carrington position in deg
      if total(thisar) ne 0 then begin
-        thiscarlon=tim2carr(in_map2.time)
+        thiscarlon=(conv_h2c([thishglon,thishglat],in_map2.time))[0]
         thiscarlat=thishglat
      endif
      
