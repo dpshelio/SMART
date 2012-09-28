@@ -1,0 +1,75 @@
+<html>
+  <head>
+
+
+  </head>
+
+  <body>
+    <h1> SMART what you want </h1>
+
+    <!--  calendar stuff -->
+    <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.6/themes/redmond/jquery-ui.css" type="text/css" media="all" rel="stylesheet" />
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.3/jquery.min.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.6/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="http://helio.i4ds.technik.fhnw.ch/Helio-dev/js/plugins/jquery-ui-timepicker-addon.js"></script>
+    <style type="text/css"> 
+      /* css for timepicker */
+      #ui-datepicker-div, .ui-datepicker{ font-size: 80%; }
+      .ui-timepicker-div .ui-widget-header { margin-bottom: 8px; }
+      .ui-timepicker-div dl { text-align: left; }
+      .ui-timepicker-div dl dt { height: 25px; margin-bottom: -25px; }
+      .ui-timepicker-div dl dd { margin: 0 10px 10px 65px; }
+      .ui-timepicker-div td { font-size: 90%; }
+      .ui-tpicker-grid-label { background: none; border: none; margin: 0; padding: 0; }
+    </style>
+
+
+
+
+    <FORM name="smart" method="post" ACTION="execute_SMART.jsp">
+      <ul>
+	<li> Instrument 
+	  <select id="instrument" name="instrument" size="1">
+	    <option value="MDI"> SOHO/MDI </option>
+	    <option value="HMI"> SDO/HMI </option>
+	    <option value="GONG"> GONG </option>
+	  </select>
+	</li>
+	<li> Start Time <INPUT id="idStartDate" class="dateinput" type="text" size="17" value="2010-01-01T00:00:00" name="StartDate">
+	</li>
+	<li> End Time <INPUT id="idStopDate" class="dateinput" type="text" size="17" value="2010-01-10T00:00:00" name="StopDate">
+	</li>
+	<li> Thresh <INPUT id="Thresh" class="defvalues" type="text">
+    </FORM>
+
+    <script type="text/javascript"> 
+      $(function(){
+      $(".dateinput").datetimepicker({
+                  dateFormat: 'yy-mm-dd',
+                  timeFormat: 'hh:mm:ss',
+                  separator: 'T'});
+      });
+    </script>
+    <script type="text/javascript">
+      $("#idStopDate").change(function() {
+         var st = new Date();
+         st = Date.parse($("#idStartDate").val());
+         var et = new Date();
+         et = Date.parse($("#idStopDate").val());
+         var now = new Date();
+         if(st >= et) || (et >= now){
+           $("#idStopDate").css("color","red");
+         }
+       };
+      });
+    </script>
+    <script type="text/javascript">
+      $("#instrument").change(function() {
+       var thresh = $(this).val() == "MDI" ? "10" : "5";
+       $("#Thresh").attr("value",thresh);
+      });
+    </script>
+
+
+  </body>
+</html>
